@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import random
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QLineEdit)
+from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit)
 
 
 class MainWindow(QWidget):
@@ -16,34 +17,40 @@ class MainWindow(QWidget):
             self.setGeometry(300, 200, 600, 400)
             self.grid = QGridLayout()
             self.teams = {}
-            self.teamlist = QListWidget()
-            self.teamlist.setSortingEnabled(True)
+            self.currentteam = [QListWidgetItem()]
 
-            #LCD Widget to display the force
+            # LCD Widget to display the force
             force=1000.11
             forcelcd = QLCDNumber(7, self)
 
-            #Push button to zero the scale
+            # Push buttons for zeroing and reseting
             zero = QPushButton('Zero Scale', self)
+            clearmax = QPushButton('Reset', self)
+            clearmax.clicked.connect(self.reset)
 
-            #Textbox to enter in team name
+            # Textbox to enter in team name
             self.teaminput = QLineEdit()
             self.teaminput.setText('Enter team here')
             self.teaminput.returnPressed.connect(self.addTeam)
 
-            #Current highest force text
-            maxforce = 0000.00
-            maxforcetxt = QLabel()
+            # Current highest force text
+            self.maxforce = 0000.00
+            self.maxforcetxt = QLabel()
             #maxforcetxt.setAlignment(Qt.AlignCenter)
-            maxforcetxt.setFont(QtGui.QFont("Times", 56))
-            maxforcetxt.setText("Maximum Force: %f" % maxforce )
+            self.maxforcetxt.setFont(QtGui.QFont("Times", 56))
+            self.maxforcetxt.setText("Maximum Force: %f" % self.maxforce )
 
-            #grid = QGridLayout()
+            # List of teams and scores
+            self.teamlist = QListWidget()
+            self.teamlist.itemDoubleClicked.connect(self.selectTeam)
+
+            # Add widgets to grid and format
             self.grid.setColumnStretch(1, 5)
             self.grid.setColumnStretch(3, 2)
-            self.grid.addWidget(maxforcetxt, 0,1)
+            self.grid.addWidget(self.maxforcetxt, 0,1)
             self.grid.addWidget(forcelcd,1,1)
             self.grid.addWidget(zero,2,1)
+            self.grid.addWidget(clearmax, 2,2)
             self.grid.addWidget(self.teamlist, 1, 3)
             self.grid.addWidget(self.teaminput, 2, 3)
 
@@ -55,6 +62,11 @@ class MainWindow(QWidget):
             if e.key() == Qt.Key_Escape:
                 self.close()
 
+        def reset(self):
+            self.maxforce = 0000.00
+            self.maxforcetxt.setText(str("Maximum Force: %f" % self.maxforce))
+
+
         def addTeam(self):
             team = self.teaminput.text()
             self.teaminput.setText("")
@@ -65,14 +77,26 @@ class MainWindow(QWidget):
                 for i in range(self.teamlist.count())
                 if self.teams[team] > self.teamlist.item(i):
             """
+            item = QListWidgetItem()
+            item.setText(team + " - " + str(self.teams[team]))
+            item.setFont(QtGui.QFont("Times", 32))
 
-            self.teamlist.addItem(team + " - " + str(self.teams[team]))
+            self.teamlist.addItem(item)
+
+        def selectTeam(self):
+            self.currentteam = self.teamlist.selectedItems()
+            #self.teamlist.addItem(self.currentteam[0])
 
 
         def updateForce(self, forcelcd, force):
-            force += 1
+            force = random.randrange(100, 5000, 1)
+            if force > self.maxforce:
+                self.maxforce = force
+                self.maxforcetxt.setText("Maximum Force: %f" % force)
+                self.currentteam[0].setText(str(force))
+
             forcelcd.display(force)
-            QtCore.QTimer.singleShot(100, lambda: self.updateForce(forcelcd, force))
+            QtCore.QTimer.singleShot(250, lambda: self.updateForce(forcelcd, force))
             
 
 def main():
