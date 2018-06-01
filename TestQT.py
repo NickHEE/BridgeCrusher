@@ -85,19 +85,32 @@ class MainWindow(QWidget):
 
         def selectTeam(self):
             self.currentteam = self.teamlist.selectedItems()
-            #self.teamlist.addItem(self.currentteam[0])
-
 
         def updateForce(self, forcelcd, force):
+            #########################################
+            #Code for getting force from serial here
+            #########################################
+
+            # Generate some random force values for testing
             force = random.randrange(100, 5000, 1)
+
+            # New max force found, update the label
             if force > self.maxforce:
                 self.maxforce = force
                 self.maxforcetxt.setText("Maximum Force: %f" % force)
+                self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
+                QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
+
+                #Update team in the list
+                #str = self.currentteam[0].text()
+                #end = str.rfind(' -')
+                #teamstr = self.currentteam[0].text()[0:end]
+                #print(teamstr)
+
                 self.currentteam[0].setText(str(force))
 
             forcelcd.display(force)
-            QtCore.QTimer.singleShot(250, lambda: self.updateForce(forcelcd, force))
-            
+            QtCore.QTimer.singleShot(350, lambda: self.updateForce(forcelcd, force))
 
 def main():
     app = QApplication(sys.argv)
