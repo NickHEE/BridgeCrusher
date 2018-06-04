@@ -87,25 +87,27 @@ class MainWindow(QWidget):
 
         def reset(self):
             self.maxforce = 0000.00
-            self.maxforcetxt.setText(str("Maximum Force: %f" % self.maxforce))
+            self.maxforcetxt.setText(str("Maximum Force: %.2f" % self.maxforce))
 
 
         def addTeam(self):
             team = self.teaminput.text()
-            self.teaminput.setText("")
-            self.teams[team] = [0000.00,]
+            print(team)
+            if team and team != "Enter team here":
+                self.teaminput.setText("")
+                self.teams[team] = [0000.00,]
 
-            item = QListWidgetItem_Team()
-            item.setText(team + " - " + str(self.teams[team]))
-            item.setFont(QtGui.QFont("Times", 32))
+                item = QListWidgetItem_Team()
+                item.setText(team + " - " + str(self.teams[team]))
+                item.setFont(QtGui.QFont("Times", 32))
 
-            self.teamlist.addItem(item)
+                self.teamlist.addItem(item)
 
         def selectTeam(self):
             self.currentteam = self.teamlist.selectedItems()
 
         def exportTeams(self):
-            print([self.teams[team] for team in self.teams])
+            #print([self.teams[team] for team in self.teams])
 
             for team in self.teams:
                 sample = 0;
