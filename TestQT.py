@@ -2,8 +2,9 @@
 
 import sys
 import random
+import re
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit)
 
 
@@ -17,11 +18,12 @@ class MainWindow(QWidget):
             self.setGeometry(300, 200, 600, 400)
             self.grid = QGridLayout()
             self.teams = {}
-            self.currentteam = [QListWidgetItem()]
+            self.currentteam = [QListWidgetItem_Team()]
 
             # LCD Widget to display the force
             force=1000.11
             forcelcd = QLCDNumber(7, self)
+            forcelcd.setFrameStyle(3)
 
             # Push buttons for zeroing and reseting
             zero = QPushButton('Zero Scale', self)
@@ -36,19 +38,25 @@ class MainWindow(QWidget):
             # Current highest force text
             self.maxforce = 0000.00
             self.maxforcetxt = QLabel()
-            #maxforcetxt.setAlignment(Qt.AlignCenter)
-            self.maxforcetxt.setFont(QtGui.QFont("Times", 56))
+            self.maxforcetxt.setFont(QtGui.QFont("Times", 48))
             self.maxforcetxt.setText("Maximum Force: %f" % self.maxforce )
 
             # List of teams and scores
             self.teamlist = QListWidget()
+            #self.teamlist.setStyleSheet("QListWidget::item::selected {background-color: green;}")
+            self.teamlist.setSortingEnabled(True)
             self.teamlist.itemDoubleClicked.connect(self.selectTeam)
 
             # Add widgets to grid and format
-            self.grid.setColumnStretch(1, 5)
-            self.grid.setColumnStretch(3, 2)
+            self.grid.setColumnStretch(1, 4)
+            self.grid.setColumnStretch(2, 4)
+            self.grid.setColumnStretch(3, 4)
+            self.grid.setRowStretch(1,6)
+            self.grid.setRowStretch(0,2)
+            self.grid.setRowStretch(0, 1)
+
             self.grid.addWidget(self.maxforcetxt, 0,1)
-            self.grid.addWidget(forcelcd,1,1)
+            self.grid.addWidget(forcelcd,1,1,1,2)
             self.grid.addWidget(zero,2,1)
             self.grid.addWidget(clearmax, 2,2)
             self.grid.addWidget(self.teamlist, 1, 3)
@@ -72,12 +80,7 @@ class MainWindow(QWidget):
             self.teaminput.setText("")
             self.teams[team] = 0000.00
 
-            """
-            if self.teamlist.count():
-                for i in range(self.teamlist.count())
-                if self.teams[team] > self.teamlist.item(i):
-            """
-            item = QListWidgetItem()
+            item = QListWidgetItem_Team()
             item.setText(team + " - " + str(self.teams[team]))
             item.setFont(QtGui.QFont("Times", 32))
 
@@ -93,24 +96,34 @@ class MainWindow(QWidget):
 
             # Generate some random force values for testing
             force = random.randrange(100, 5000, 1)
+            force += 0.01
 
-            # New max force found, update the label
+            # New max force found, update the force label and list
             if force > self.maxforce:
                 self.maxforce = force
                 self.maxforcetxt.setText("Maximum Force: %f" % force)
                 self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
                 QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
-
-                #Update team in the list
-                #str = self.currentteam[0].text()
-                #end = str.rfind(' -')
-                #teamstr = self.currentteam[0].text()[0:end]
-                #print(teamstr)
-
-                self.currentteam[0].setText(str(force))
+                self.currentteam[0].setForce(force)
 
             forcelcd.display(force)
             QtCore.QTimer.singleShot(350, lambda: self.updateForce(forcelcd, force))
+
+
+class QListWidgetItem_Team(QListWidgetItem):
+
+    def setForce(self, force):
+        end = self.text().rfind(' -')
+        name = self.text()[0:end]
+        self.setText(name + " - " + str(force))
+
+    def force(self):
+        r = re.compile("([0-9]*[.]){1}[0-9]+")
+        return float(r.search(self.text()).group(0))
+
+    def __lt__(self, other):
+        return self.force() > other.force()
+
 
 def main():
     app = QApplication(sys.argv)
