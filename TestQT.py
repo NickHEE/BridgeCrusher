@@ -3,9 +3,12 @@
 import sys
 import random
 import re
+import csv
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit)
+from PyQt5.QtGui import QPixmap
+
 
 
 class MainWindow(QWidget):
@@ -25,10 +28,12 @@ class MainWindow(QWidget):
             forcelcd = QLCDNumber(7, self)
             forcelcd.setFrameStyle(3)
 
-            # Push buttons for zeroing and reseting
+            # Push buttons for zeroing, resetting and exporting
             zero = QPushButton('Zero Scale', self)
             clearmax = QPushButton('Reset', self)
             clearmax.clicked.connect(self.reset)
+            export = QPushButton('Export', self)
+            export.clicked.connect(self.exportTeams)
 
             # Textbox to enter in team name
             self.teaminput = QLineEdit()
@@ -47,6 +52,12 @@ class MainWindow(QWidget):
             self.teamlist.setSortingEnabled(True)
             self.teamlist.itemDoubleClicked.connect(self.selectTeam)
 
+            # EGBC Logo
+            self.EGBC = QLabel()
+            img = QPixmap('EGBC_Logo_Mod2.png')
+            self.EGBC.setPixmap(img)
+
+
             # Add widgets to grid and format
             self.grid.setColumnStretch(1, 4)
             self.grid.setColumnStretch(2, 4)
@@ -55,15 +66,18 @@ class MainWindow(QWidget):
             self.grid.setRowStretch(0,2)
             self.grid.setRowStretch(0, 1)
 
-            self.grid.addWidget(self.maxforcetxt, 0,1)
-            self.grid.addWidget(forcelcd,1,1,1,2)
+            self.grid.addWidget(self.maxforcetxt, 0, 1)
+            self.grid.addWidget(self.EGBC, 0, 4)
+            self.grid.addWidget(forcelcd,1,1,1,3)
             self.grid.addWidget(zero,2,1)
-            self.grid.addWidget(clearmax, 2,2)
-            self.grid.addWidget(self.teamlist, 1, 3)
-            self.grid.addWidget(self.teaminput, 2, 3)
+            self.grid.addWidget(clearmax, 2, 2)
+            self.grid.addWidget(export, 2, 3)
+            self.grid.addWidget(self.teamlist, 1, 4)
+            self.grid.addWidget(self.teaminput, 2, 4)
 
             self.updateForce(forcelcd, force)
             self.setLayout(self.grid)
+            print(self.teaminput.width())
             self.showFullScreen()
 
         def keyPressEvent(self, e):
@@ -78,7 +92,7 @@ class MainWindow(QWidget):
         def addTeam(self):
             team = self.teaminput.text()
             self.teaminput.setText("")
-            self.teams[team] = 0000.00
+            self.teams[team] = [0000.00,]
 
             item = QListWidgetItem_Team()
             item.setText(team + " - " + str(self.teams[team]))
@@ -89,6 +103,27 @@ class MainWindow(QWidget):
         def selectTeam(self):
             self.currentteam = self.teamlist.selectedItems()
 
+        def exportTeams(self):
+            print([self.teams[team] for team in self.teams])
+
+            with open('teams.csv', "w", newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames = ['Team', 'Force'])
+                writer.writeheader()
+
+                for team in self.teams:
+                    writer.writerow({'Team': team, 'Force': str(self.teams[team])})
+                csvfile.close()
+
+            with open('teams.csv', "r", newline='') as csvfilein, \
+                 open('teamsedit.csv', "w", newline = '') as csvfileout:
+
+                data = csvfilein.read()
+                data = data.replace("[", "")
+                data = data.replace("]", "")
+                data = data.replace('"', "")
+                csvfileout.write(data)
+                csvfileout.close()
+
         def updateForce(self, forcelcd, force):
             #########################################
             #Code for getting force from serial here
@@ -97,6 +132,10 @@ class MainWindow(QWidget):
             # Generate some random force values for testing
             force = random.randrange(100, 5000, 1)
             force += 0.01
+
+            # Update team dictionary
+            if self.currentteam[0].name():
+                self.teams[self.currentteam[0].name()].append(force)
 
             # New max force found, update the force label and list
             if force > self.maxforce:
@@ -113,13 +152,15 @@ class MainWindow(QWidget):
 class QListWidgetItem_Team(QListWidgetItem):
 
     def setForce(self, force):
-        end = self.text().rfind(' -')
-        name = self.text()[0:end]
-        self.setText(name + " - " + str(force))
+        self.setText(self.name() + " - " + str(force))
 
     def force(self):
         r = re.compile("([0-9]*[.]){1}[0-9]+")
         return float(r.search(self.text()).group(0))
+
+    def name(self):
+        end = self.text().rfind(' -')
+        return self.text()[0:end]
 
     def __lt__(self, other):
         return self.force() > other.force()
