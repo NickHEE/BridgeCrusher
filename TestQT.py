@@ -103,6 +103,11 @@ class MainWindow(QWidget):
 
                 self.teamlist.addItem(item)
 
+            with open(team + '.csv', 'w', newline='') as csvfileout:
+                writer = csv.DictWriter(csvfileout, fieldnames=['Sample', 'Force'])
+                writer.writeheader()
+                csvfileout.close()
+
         def selectTeam(self):
             self.currentteam = self.teamlist.selectedItems()
 
@@ -119,18 +124,6 @@ class MainWindow(QWidget):
                         sample+=1
                 csvfileout.close()
 
-                with open(team + '.csv', "r", newline='') as csvfilein, \
-                     open(team + '_' + '.csv', "w", newline = '') as csvfileout:
-
-                    data = csvfilein.read()
-                    data = data.replace("[", "")
-                    data = data.replace("]", "")
-                    data = data.replace('"', "")
-                    csvfileout.write(data)
-                    csvfileout.close()
-
-                os.unlink(team + '.csv')
-
         def updateForce(self, forcelcd, force):
             #########################################
             #Code for getting force from serial here
@@ -140,9 +133,15 @@ class MainWindow(QWidget):
             force = random.randrange(100, 5000, 1)
             force += 0.01
 
-            # Update team dictionary
+            # Update team dictionary and CSV file
             if self.currentteam[0].name():
                 self.teams[self.currentteam[0].name()].append(force)
+
+                with open(self.currentteam[0].name() + ".csv", "a+", newline='') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=['Sample', 'Force'])
+                    samplenum = sum(1 for line in csvfile)
+                    writer.writerow({'Sample': samplenum, 'Force': force})
+                    csvfile.close()
 
             # New max force found, update the force label and list
             if force > self.maxforce:
