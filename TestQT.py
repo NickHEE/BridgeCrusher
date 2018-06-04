@@ -4,6 +4,7 @@ import sys
 import random
 import re
 import csv
+import os
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit)
@@ -43,7 +44,7 @@ class MainWindow(QWidget):
             # Current highest force text
             self.maxforce = 0000.00
             self.maxforcetxt = QLabel()
-            self.maxforcetxt.setFont(QtGui.QFont("Times", 48))
+            self.maxforcetxt.setFont(QtGui.QFont("Times", 52))
             self.maxforcetxt.setText("Maximum Force: %f" % self.maxforce )
 
             # List of teams and scores
@@ -106,23 +107,27 @@ class MainWindow(QWidget):
         def exportTeams(self):
             print([self.teams[team] for team in self.teams])
 
-            with open('teams.csv', "w", newline='') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames = ['Team', 'Force'])
-                writer.writeheader()
-
-                for team in self.teams:
-                    writer.writerow({'Team': team, 'Force': str(self.teams[team])})
-                csvfile.close()
-
-            with open('teams.csv', "r", newline='') as csvfilein, \
-                 open('teamsedit.csv', "w", newline = '') as csvfileout:
-
-                data = csvfilein.read()
-                data = data.replace("[", "")
-                data = data.replace("]", "")
-                data = data.replace('"', "")
-                csvfileout.write(data)
+            for team in self.teams:
+                sample = 0;
+                with open(team + '.csv', "w", newline='') as csvfileout:
+                    writer = csv.DictWriter(csvfileout, fieldnames=['Sample', 'Force'])
+                    writer.writeheader()
+                    for samples in self.teams[team]:
+                        writer.writerow({'Sample': sample, 'Force': samples})
+                        sample+=1
                 csvfileout.close()
+
+                with open(team + '.csv', "r", newline='') as csvfilein, \
+                     open(team + '_' + '.csv', "w", newline = '') as csvfileout:
+
+                    data = csvfilein.read()
+                    data = data.replace("[", "")
+                    data = data.replace("]", "")
+                    data = data.replace('"', "")
+                    csvfileout.write(data)
+                    csvfileout.close()
+
+                os.unlink(team + '.csv')
 
         def updateForce(self, forcelcd, force):
             #########################################
@@ -140,7 +145,7 @@ class MainWindow(QWidget):
             # New max force found, update the force label and list
             if force > self.maxforce:
                 self.maxforce = force
-                self.maxforcetxt.setText("Maximum Force: %f" % force)
+                self.maxforcetxt.setText("Maximum Force: %.2f" % force)
                 self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
                 QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
                 self.currentteam[0].setForce(force)
