@@ -7,8 +7,8 @@ import csv
 import os
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit)
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit, QMainWindow)
+from PyQt5.QtGui import QPixmap, QPainter
 
 
 
@@ -19,7 +19,7 @@ class MainWindow(QWidget):
             self.initUI()
 
         def initUI(self):
-            self.setGeometry(300, 200, 600, 400)
+
             self.grid = QGridLayout()
             self.teams = {}
             self.currentteam = [QListWidgetItem_Team()]
@@ -27,7 +27,12 @@ class MainWindow(QWidget):
             # LCD Widget to display the force
             force=1000.11
             forcelcd = QLCDNumber(7, self)
-            forcelcd.setFrameStyle(3)
+            forcelcd.setStyleSheet("color: rgb(0, 210, 0); background-image: url(background3.png); background-attachment: fixed")
+            lcdpalette = forcelcd.palette()
+            lcdpalette.setColor(lcdpalette.Light, QtGui.QColor(0, 255, 0))
+            lcdpalette.setColor(lcdpalette.Dark, QtGui.QColor(0, 0, 0))
+            forcelcd.setPalette(lcdpalette)
+            forcelcd.setFrameStyle(0)
 
             # Push buttons for zeroing, resetting and exporting
             zero = QPushButton('Zero Scale', self)
@@ -44,8 +49,10 @@ class MainWindow(QWidget):
             # Current highest force text
             self.maxforce = 0000.00
             self.maxforcetxt = QLabel()
-            self.maxforcetxt.setFont(QtGui.QFont("Times", 52))
+            self.maxforcetxt.setFont(QtGui.QFont("Quartz", 62))
             self.maxforcetxt.setText("Maximum Force: %f" % self.maxforce )
+            self.maxforcetxt.setStyleSheet("color: rgb(0, 210, 0); background-image: url(maxbackground.png); background-attachment: fixed")
+            self.maxforcetxt.setAlignment(QtCore.Qt.AlignCenter)
 
             # List of teams and scores
             self.teamlist = QListWidget()
@@ -67,7 +74,7 @@ class MainWindow(QWidget):
             self.grid.setRowStretch(0,2)
             self.grid.setRowStretch(0, 1)
 
-            self.grid.addWidget(self.maxforcetxt, 0, 1)
+            self.grid.addWidget(self.maxforcetxt, 0, 1, 1, 3)
             self.grid.addWidget(self.EGBC, 0, 4)
             self.grid.addWidget(forcelcd,1,1,1,3)
             self.grid.addWidget(zero,2,1)
@@ -77,8 +84,10 @@ class MainWindow(QWidget):
             self.grid.addWidget(self.teaminput, 2, 4)
 
             self.updateForce(forcelcd, force)
+            #self.setStyleSheet("background-image: url(background1.jpg);")
             self.setLayout(self.grid)
             print(self.teaminput.width())
+
             self.showFullScreen()
 
         def keyPressEvent(self, e):
@@ -147,8 +156,8 @@ class MainWindow(QWidget):
             if force > self.maxforce:
                 self.maxforce = force
                 self.maxforcetxt.setText("Maximum Force: %.2f" % force)
-                self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
-                QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
+                #self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
+                #QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
                 self.currentteam[0].setForce(force)
 
             forcelcd.display(force)
