@@ -5,27 +5,39 @@ import random
 import re
 import csv
 import os
+import serial
+import io
+import time
+
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication, QGridLayout, QPushButton, QListWidget, QListWidgetItem, QLineEdit, QMainWindow)
-from PyQt5.QtGui import QPixmap, QPainter
+from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication,
+                             QGridLayout, QPushButton, QListWidget,
+                             QListWidgetItem, QLineEdit, QMessageBox
+                             )
+from PyQt5.QtGui import QPixmap
 
+
+# CLASSES
 
 
 class MainWindow(QWidget):
 
         def __init__(self):
             super().__init__()
+            self.ser = ser
+            self.sio = sio
+            self.start = 1
+            self.maxforce = 0000.00
+            self.force = 0.0
             self.initUI()
 
         def initUI(self):
-
             self.grid = QGridLayout()
             self.teams = {}
             self.currentteam = [QListWidgetItem_Team()]
 
             # LCD Widget to display the force
-            force=1000.11
             forcelcd = QLCDNumber(7, self)
             forcelcd.setStyleSheet("color: rgb(0, 210, 0); background-image: url(background3.png); background-attachment: fixed")
             lcdpalette = forcelcd.palette()
@@ -34,12 +46,18 @@ class MainWindow(QWidget):
             forcelcd.setPalette(lcdpalette)
             forcelcd.setFrameStyle(0)
 
-            # Push buttons for zeroing, resetting and exporting
+            # Push buttons
             zero = QPushButton('Zero Scale', self)
             clearmax = QPushButton('Reset', self)
             clearmax.clicked.connect(self.reset)
             export = QPushButton('Export', self)
+            togglestart = QPushButton('Start/Stop', self)
+
+            # Push Button Functions
+            zero.clicked.connect(self.zero_scale)
+            clearmax.clicked.connect(self.reset)
             export.clicked.connect(self.exportTeams)
+            togglestart.clicked.connect(self.toggle)
 
             # Textbox to enter in team name
             self.teaminput = QLineEdit()
@@ -67,44 +85,67 @@ class MainWindow(QWidget):
 
 
             # Add widgets to grid and format
-            self.grid.setColumnStretch(1, 4)
-            self.grid.setColumnStretch(2, 4)
-            self.grid.setColumnStretch(3, 4)
-            self.grid.setRowStretch(1,6)
-            self.grid.setRowStretch(0,2)
+            self.grid.setColumnStretch(1, 5)
+            self.grid.setColumnStretch(2, 5)
+            self.grid.setColumnStretch(3, 5)
+            self.grid.setColumnStretch(4, 5)
+            self.grid.setRowStretch(1, 6)
+            self.grid.setRowStretch(0, 2)
             self.grid.setRowStretch(0, 1)
 
             self.grid.addWidget(self.maxforcetxt, 0, 1, 1, 3)
             self.grid.addWidget(self.EGBC, 0, 4)
-            self.grid.addWidget(forcelcd,1,1,1,3)
-            self.grid.addWidget(zero,2,1)
+            self.grid.addWidget(self.forcelcd, 1, 1, 1, 4)
+            self.grid.addWidget(zero, 2, 1)
             self.grid.addWidget(clearmax, 2, 2)
             self.grid.addWidget(export, 2, 3)
-            self.grid.addWidget(self.teamlist, 1, 4)
-            self.grid.addWidget(self.teaminput, 2, 4)
+            self.grid.addWidget(togglestart, 2, 4)
+            self.grid.addWidget(self.teamlist, 1, 5)
+            self.grid.addWidget(self.teaminput, 2, 5)
 
-            self.updateForce(forcelcd, force)
-            #self.setStyleSheet("background-image: url(background1.jpg);")
+            self.updateforce()
             self.setLayout(self.grid)
             print(self.teaminput.width())
-
             self.showFullScreen()
 
+        # FUNCTIONS
         def keyPressEvent(self, e):
             if e.key() == Qt.Key_Escape:
-                self.close()
+                reply = QMessageBox.question(self, 'PyQt5 message', "Do you want to exit the program?",
+                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if reply == QMessageBox.Yes:
+                    self.close()
+                else:
+                    e.ignore()
+
+        def zero_scale(self):
+            self.ser.write(b'x\r\n')
+            self.sio.flush()
+            trunk = self.sio.readline()
+            self.ser.write(b'1\r\n')
+            self.sio.flush()
+            for line in self.sio.readlines():
+                if line == '>\r\n':
+                    break
+            self.ser.write(b'x\r\nx\r\n')
+            self.sio.flush()
+            self.reset()
 
         def reset(self):
-            self.maxforce = 0000.00
-            self.maxforcetxt.setText(str("Maximum Force: %.2f" % self.maxforce))
+            self.maxforce = 0.0
+            self.force = 0.0
+            self.maxforcetxt.setText(str("Maximum Force: %.2f N" % self.maxforce))
+            self.forcelcd.display(self.force)
 
+        def toggle(self):
+            self.start ^= 1
 
         def addTeam(self):
             team = self.teaminput.text()
             print(team)
             if team and team != "Enter team here":
                 self.teaminput.setText("")
-                self.teams[team] = [0000.00,]
+                self.teams[team] = [0.00, ]
 
                 item = QListWidgetItem_Team()
                 item.setText(team + " - " + str(self.teams[team]))
@@ -124,45 +165,51 @@ class MainWindow(QWidget):
             #print([self.teams[team] for team in self.teams])
 
             for team in self.teams:
-                sample = 0;
+                sample = 0
                 with open(team + '.csv', "w", newline='') as csvfileout:
                     writer = csv.DictWriter(csvfileout, fieldnames=['Sample', 'Force'])
                     writer.writeheader()
                     for samples in self.teams[team]:
                         writer.writerow({'Sample': sample, 'Force': samples})
-                        sample+=1
+                        sample += 1
                 csvfileout.close()
 
-        def updateForce(self, forcelcd, force):
-            #########################################
-            #Code for getting force from serial here
-            #########################################
+        def get_force(self):
+            output = self.sio.readline()
+            if 'Exiting' not in output:
+                # start = output.rfind('-')
+                end = output.rfind(',kg')
+                value = output[0:end]
+            else:
+                value = 0.0
+            return value
 
-            # Generate some random force values for testing
-            force = random.randrange(100, 5000, 1)
-            force += 0.01
+        def updateforce(self):
+            self.force = float(self.get_force())
+            if self.start:
+                # Generate some random force values for testing
+                # self.force = float(self.get_force())
+                self.forcelcd.display(self.force)
 
-            # Update team dictionary and CSV file
-            if self.currentteam[0].name():
-                self.teams[self.currentteam[0].name()].append(force)
+                # Update team dictionary and CSV file
+                if self.currentteam[0].name():
+                    self.teams[self.currentteam[0].name()].append(self.force)
 
-                with open(self.currentteam[0].name() + ".csv", "a+", newline='') as csvfile:
-                    writer = csv.DictWriter(csvfile, fieldnames=['Sample', 'Force'])
-                    samplenum = sum(1 for line in csvfile)
-                    writer.writerow({'Sample': samplenum, 'Force': force})
-                    csvfile.close()
+                    with open(self.currentteam[0].name() + ".csv", "a+", newline='') as csvfile:
+                        writer = csv.DictWriter(csvfile, fieldnames=['Sample', 'Force'])
+                        samplenum = sum(1 for line in csvfile)
+                        writer.writerow({'Sample': samplenum, 'Force': self.force})
+                        csvfile.close()
 
             # New max force found, update the force label and list
-            if force > self.maxforce:
-                self.maxforce = force
-                self.maxforcetxt.setText("Maximum Force: %.2f" % force)
-                #self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
-                #QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
-                self.currentteam[0].setForce(force)
+                if self.force > self.maxforce:
+                    self.maxforce = self.force
+                    self.maxforcetxt.setText("Maximum Force: %.2f" % self.force)
+                    #self.maxforcetxt.setStyleSheet("QLabel {background-color: red}")
+                    #QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
+                    self.currentteam[0].setForce(self.force)
 
-            forcelcd.display(force)
-            QtCore.QTimer.singleShot(350, lambda: self.updateForce(forcelcd, force))
-
+            QtCore.QTimer.singleShot(100, lambda: self.updateforce())
 
 class QListWidgetItem_Team(QListWidgetItem):
 
@@ -183,7 +230,13 @@ class QListWidgetItem_Team(QListWidgetItem):
 
 def main():
     app = QApplication(sys.argv)
-    ex = MainWindow()
+    ser = serial.Serial('COM4', 115200, timeout=1)
+    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
+    start_ = time.time()
+    while time.time() < start_ + 1:
+        trunk = ser.readline()
+
+    cMain = MainWindow(ser, sio)
     sys.exit(app.exec_())
 
 
