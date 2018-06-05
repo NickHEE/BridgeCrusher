@@ -10,12 +10,13 @@ import io
 import time
 
 from PyQt5 import QtGui, QtCore
+from PyQt5.QtChart import *
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication,
                              QGridLayout, QPushButton, QListWidget,
                              QListWidgetItem, QLineEdit, QMessageBox
                              )
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QPainter
 
 
 # CLASSES
@@ -25,8 +26,8 @@ class MainWindow(QWidget):
 
         def __init__(self):
             super().__init__()
-            self.ser = ser
-            self.sio = sio
+            #self.ser = ser
+            #self.sio = sio
             self.start = 1
             self.maxforce = 0000.00
             self.force = 0.0
@@ -36,15 +37,17 @@ class MainWindow(QWidget):
             self.grid = QGridLayout()
             self.teams = {}
             self.currentteam = [QListWidgetItem_Team()]
+            self.chartView = QChartView()
+            self.loadNewGraph = True
 
             # LCD Widget to display the force
-            forcelcd = QLCDNumber(7, self)
-            forcelcd.setStyleSheet("color: rgb(0, 210, 0); background-image: url(background3.png); background-attachment: fixed")
-            lcdpalette = forcelcd.palette()
+            self.forcelcd = QLCDNumber(7, self)
+            self.forcelcd.setStyleSheet("color: rgb(0, 210, 0); background-image: url(background3.png); background-attachment: fixed")
+            lcdpalette = self.forcelcd.palette()
             lcdpalette.setColor(lcdpalette.Light, QtGui.QColor(0, 255, 0))
             lcdpalette.setColor(lcdpalette.Dark, QtGui.QColor(0, 0, 0))
-            forcelcd.setPalette(lcdpalette)
-            forcelcd.setFrameStyle(0)
+            self.forcelcd.setPalette(lcdpalette)
+            self.forcelcd.setFrameStyle(0)
 
             # Push buttons
             zero = QPushButton('Zero Scale', self)
@@ -119,6 +122,7 @@ class MainWindow(QWidget):
                     e.ignore()
 
         def zero_scale(self):
+            """
             self.ser.write(b'x\r\n')
             self.sio.flush()
             trunk = self.sio.readline()
@@ -130,6 +134,9 @@ class MainWindow(QWidget):
             self.ser.write(b'x\r\nx\r\n')
             self.sio.flush()
             self.reset()
+            """
+            return
+
 
         def reset(self):
             self.maxforce = 0.0
@@ -139,6 +146,9 @@ class MainWindow(QWidget):
 
         def toggle(self):
             self.start ^= 1
+            #self.loadNewGraph = True
+            #if not self.start:
+                #self.loadNewGraph = True
 
         def addTeam(self):
             team = self.teaminput.text()
@@ -160,6 +170,7 @@ class MainWindow(QWidget):
 
         def selectTeam(self):
             self.currentteam = self.teamlist.selectedItems()
+            self.loadNewGraph = True
 
         def exportTeams(self):
             #print([self.teams[team] for team in self.teams])
@@ -173,7 +184,7 @@ class MainWindow(QWidget):
                         writer.writerow({'Sample': sample, 'Force': samples})
                         sample += 1
                 csvfileout.close()
-
+        """
         def get_force(self):
             output = self.sio.readline()
             if 'Exiting' not in output:
@@ -183,11 +194,17 @@ class MainWindow(QWidget):
             else:
                 value = 0.0
             return value
+        """
 
         def updateforce(self):
-            self.force = float(self.get_force())
+
             if self.start:
+                self.loadNewGraph = True
+                self.chartView.hide()
+                self.forcelcd.show()
                 # Generate some random force values for testing
+                self.force = random.randrange(1,5000,1)
+                self.force += 0.01
                 # self.force = float(self.get_force())
                 self.forcelcd.display(self.force)
 
@@ -197,6 +214,7 @@ class MainWindow(QWidget):
 
                     with open(self.currentteam[0].name() + ".csv", "a+", newline='') as csvfile:
                         writer = csv.DictWriter(csvfile, fieldnames=['Sample', 'Force'])
+                        csvfile.seek(0)
                         samplenum = sum(1 for line in csvfile)
                         writer.writerow({'Sample': samplenum, 'Force': self.force})
                         csvfile.close()
@@ -209,7 +227,31 @@ class MainWindow(QWidget):
                     #QtCore.QTimer.singleShot(250, lambda: self.maxforcetxt.setStyleSheet(""))
                     self.currentteam[0].setForce(self.force)
 
-            QtCore.QTimer.singleShot(100, lambda: self.updateforce())
+            if not self.start and self.loadNewGraph:
+                self.forcelcd.hide()
+
+                data = QSplineSeries()
+                data.setName("Test Graph")
+
+                with open(self.currentteam[0].name() + '.csv', "r", newline='') as file:
+                    for line in file:
+                        if "Sample" not in line:
+                            s = line.split(",")
+                            data.append(float(s[0]), float(s[1]))
+                    file.close()
+
+                force_chart = QChart()
+                force_chart.addSeries(data)
+                force_chart.setTitle("Test")
+                force_chart.createDefaultAxes()
+                force_chart.setTheme(2)
+                self.chartView = QChartView(force_chart)
+                self.chartView.setRenderHint(QPainter.Antialiasing)
+                self.grid.addWidget(self.chartView, 1, 1, 1, 4)
+                self.chartView.show()
+                self.loadNewGraph = False;
+
+            QtCore.QTimer.singleShot(200, lambda: self.updateforce())
 
 class QListWidgetItem_Team(QListWidgetItem):
 
@@ -230,13 +272,14 @@ class QListWidgetItem_Team(QListWidgetItem):
 
 def main():
     app = QApplication(sys.argv)
-    ser = serial.Serial('COM4', 115200, timeout=1)
-    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
-    start_ = time.time()
-    while time.time() < start_ + 1:
-        trunk = ser.readline()
+    #ser = serial.Serial('COM4', 115200, timeout=1)
+    #sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
+    #start_ = time.time()
+    #while time.time() < start_ + 1:
+        #trunk = ser.readline()
 
-    cMain = MainWindow(ser, sio)
+    #cMain = MainWindow(ser, sio)
+    cMain = MainWindow()
     sys.exit(app.exec_())
 
 
