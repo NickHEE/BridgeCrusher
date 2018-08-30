@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-COM_PORT = None
-csv_path = 'csv'
-
-
 import sys
 import random
 import re
@@ -22,6 +18,8 @@ from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication,
                              QListWidgetItem, QLineEdit, QMessageBox
                              )
 from PyQt5.QtGui import QPixmap, QPainter, QPalette, QColor
+
+csv_path = 'csv'
 
 
 class MainWindow(QWidget):
@@ -108,7 +106,6 @@ class MainWindow(QWidget):
             self.EGBC = QLabel()
             img = QPixmap('EGBC_Logo_Mod2.png')
             self.EGBC.setPixmap(img)
-
 
             # Add widgets to grid and format
             self.grid.setColumnStretch(1, 2)
@@ -318,6 +315,10 @@ def main():
         if "USB Serial Port" in p.description:
             match = re.search(r"COM\d", p.description)
             COM_PORT = match.group(0)
+
+    ################################################
+    #COM_PORT = SET COM PORT MANUALLY HERE IF NEEDED
+    ################################################
 
     # Setup COM port
     ser = serial.Serial(COM_PORT, 115200, timeout=0.2)
