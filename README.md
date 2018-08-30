@@ -13,9 +13,9 @@ Authors: Nick Huttemann, Julie Lee
 3. Enter your team name into the team list on the right and **double click** the team to select it as the active team.
 4. When a team is active, force data will be recorded into a .csv file. When your bridge has been crushed or you wish to view the recorded data, press the **Start/Stop** button to stop recording data and view a force vs time graph.
 5. When its time for the next team to have a go: 
-    5. Enter another team name
-    5. **Double click** the team to select it as the active team
-    5. Press **Reset** to reset the current maximum force
-    5. Press **Start/Stop** and crush your bridge
+    1. Enter another team name
+    2. **Double click** the team to select it as the active team
+    3. Press **Reset** to reset the current maximum force
+    4. Press **Start/Stop** and crush your bridge
 
 
