@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import random
 import re
@@ -63,7 +61,10 @@ class MainWindow(QWidget):
 
             # LCD Widget to display the force
             self.forcelcd = QLCDNumber(7, self)
-            self.forcelcd.setStyleSheet("color: rgb(0, 210, 0); border-image: url(background3.png) stretch; background-repeat: no-repeat;")
+            self.maxforcetxt.setStyleSheet(r"color: rgb(0, 210, 0); "
+                                           r"background-image: url(maxbackground.png); "
+                                           r"background-attachment: fixed;"
+                                           r"background-repeat: no-repeat;")
             lcdpalette = self.forcelcd.palette()
             lcdpalette.setColor(lcdpalette.Light, QtGui.QColor(0, 255, 0))
             lcdpalette.setColor(lcdpalette.Dark, QtGui.QColor(0, 0, 0))
@@ -91,9 +92,12 @@ class MainWindow(QWidget):
             # Current highest force text
             self.maxforce = 0000.00
             self.maxforcetxt = QLabel()
-            self.maxforcetxt.setFont(QtGui.QFont("Quartz", 62))
-            self.maxforcetxt.setText("Maximum Force: %.2f N" % self.maxforce )
-            self.maxforcetxt.setStyleSheet("color: rgb(0, 210, 0); background-image: url(maxbackground.png); background-attachment: fixed")
+            self.maxforcetxt.setFont(QtGui.QFont("DS-Digital", 68))
+            self.maxforcetxt.setText("Maximum Force: %.2f N" % self.maxforce)
+            self.maxforcetxt.setStyleSheet(r"color: rgb(0, 210, 0); "
+                                           r"background-image: url(maxbackground.png); "
+                                           r"background-attachment: fixed;"
+                                           r"background-repeat: no-repeat;")
             self.maxforcetxt.setAlignment(QtCore.Qt.AlignCenter)
 
             # List of teams and scores
@@ -104,7 +108,7 @@ class MainWindow(QWidget):
 
             # EGBC Logo
             self.EGBC = QLabel()
-            img = QPixmap('EGBC_Logo_Mod2.png')
+            img = QPixmap('logo.png')
             self.EGBC.setPixmap(img)
 
             # Add widgets to grid and format
@@ -165,7 +169,6 @@ class MainWindow(QWidget):
             self.start ^= 1
             if self.start:
                 self.chartView.hide()
-                #self.grid.removeWidget(self.chartView)
                 self.forcelcd.show()
             else:
                 self.loadNewGraph = True
@@ -279,7 +282,6 @@ class MainWindow(QWidget):
                 force_chart.setTheme(2)
                 self.chartView = QChartView(force_chart)
                 self.chartView.setRenderHint(QPainter.Antialiasing)
-                # self.grid.removeWidget(self.chartView)
                 self.grid.addWidget(self.chartView, 1, 1, 1, 5)
                 print(self.grid.children())
                 self.chartView.show()
@@ -316,9 +318,9 @@ def main():
             match = re.search(r"COM\d", p.description)
             COM_PORT = match.group(0)
 
-    ################################################
-    #COM_PORT = SET COM PORT MANUALLY HERE IF NEEDED
-    ################################################
+    ##############################################################
+    #COM_PORT = UNCOMMENT AND SET COM PORT MANUALLY HERE IF NEEDED
+    ##############################################################
 
     # Setup COM port
     ser = serial.Serial(COM_PORT, 115200, timeout=0.2)
