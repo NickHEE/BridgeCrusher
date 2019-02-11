@@ -243,7 +243,6 @@ class MainWindow(QWidget):
                         self.currentteam[0].samples += 1
                         csvfile.close()
                     end = time.time()
-                    print(end - start)
 
             # New max force found, update the force label and list
                 if self.force > self.maxforce:
@@ -278,7 +277,6 @@ class MainWindow(QWidget):
                 self.chartView = QChartView(force_chart)
                 self.chartView.setRenderHint(QPainter.Antialiasing)
                 self.grid.addWidget(self.chartView, 1, 1, 1, 5)
-                print(self.grid.children())
                 self.chartView.show()
                 self.loadNewGraph = False
 
