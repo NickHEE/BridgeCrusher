@@ -11,6 +11,7 @@ Authors: Nick Huttemann, Julie Lee
 1. Install Python 3.6+ and clone BridgeCrusher to your desired directory
 2. Open a command prompt and "cd" to the BridgeCrusher folder (eg: cd C:\Users\Nick\Desktop\BridgeCrusher)
 3. pip install -r "requirements.txt" (This will install all the required modules)
+4. Double click the "DS-DIGI" file to install the LCD font for the "maximum force" display
 
 # Quick Start Guide
 
