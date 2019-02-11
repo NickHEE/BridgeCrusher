@@ -133,7 +133,6 @@ class MainWindow(QWidget):
 
             self.updateforce()
             self.setLayout(self.grid)
-            print(self.teaminput.width())
             self.showFullScreen()
 
         def keyPressEvent(self, e):
@@ -181,11 +180,9 @@ class MainWindow(QWidget):
             if team and team != "Enter team here":
                 self.teaminput.setText("")
                 self.teams[team] = [0.00, ]
-
                 item = QListWidgetItem_Team()
                 item.setText(team + " - " + str(self.teams[team]))
                 item.setFont(QtGui.QFont("Times", 32))
-
                 self.teamlist.addItem(item)
 
             with open(os.path.join(csv_path, team + '.csv'), 'w', newline='') as csvfileout:
@@ -238,12 +235,10 @@ class MainWindow(QWidget):
                 # Update team dictionary and CSV file
                 if self.currentteam[0].name():
                     self.teams[self.currentteam[0].name()].append(self.force)
-
                     start = time.time()
                     with open(os.path.join(csv_path, self.currentteam[0].name() + ".csv"), "a+", newline='') as csvfile:
                         writer = csv.DictWriter(csvfile, fieldnames=['Sample', 'Force'])
                         csvfile.seek(0)
-
                         writer.writerow({'Sample': self.currentteam[0].samples, 'Force': self.force})
                         self.currentteam[0].samples += 1
                         csvfile.close()
