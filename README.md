@@ -2,7 +2,7 @@
 Simple GUI that displays the maximum force that a bridge can handle before collapsing.
 Authors: Nick Huttemann, Julie Lee
 
-![alt text](https://raw.githubusercontent.com/NickHEE/BridgeCrusher/master/Screenshot.png)
+![alt text](https://raw.githubusercontent.com/NickHEE/BridgeCrusher/experimental/Screenshot.png)
 
 # Quick Start Guide
 
