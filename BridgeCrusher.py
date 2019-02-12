@@ -17,12 +17,12 @@ from PyQt5.QtWidgets import (QWidget, QLCDNumber, QLabel, QApplication,
                              )
 from PyQt5.QtGui import QPixmap, QPainter, QPalette, QColor
 
-csv_path = 'csv'
-
+script_dir = os.path.dirname(__file__)
+csv_path = os.path.join(script_dir,'csv')
 
 class MainWindow(QWidget):
 
-        def __init__(self, ser, sio):
+        def __init__(self, ser=None, sio=None):
             super().__init__()
 
             # Setup the colour palette
@@ -53,6 +53,7 @@ class MainWindow(QWidget):
             self.initUI()
 
         def initUI(self):
+            self.inActive = 0
             self.grid = QGridLayout()
             self.teams = {}
             self.currentteam = [QListWidgetItem_Team()]
@@ -61,10 +62,10 @@ class MainWindow(QWidget):
 
             # LCD Widget to display the force
             self.forcelcd = QLCDNumber(7, self)
-            self.maxforcetxt.setStyleSheet(r"color: rgb(0, 210, 0); "
-                                           r"background-image: url(maxbackground.png); "
-                                           r"background-attachment: fixed;"
-                                           r"background-repeat: no-repeat;")
+            self.forcelcd.setStyleSheet(r"color: rgb(0, 210, 0); "
+                                        r"border-image: url(background.png);"
+                                        r"stretch; "
+                                        r"background-repeat: no-repeat;")
             lcdpalette = self.forcelcd.palette()
             lcdpalette.setColor(lcdpalette.Light, QtGui.QColor(0, 255, 0))
             lcdpalette.setColor(lcdpalette.Dark, QtGui.QColor(0, 0, 0))
@@ -76,13 +77,13 @@ class MainWindow(QWidget):
             clearmax = QPushButton('Reset', self)
             clearmax.clicked.connect(self.reset)
             export = QPushButton('Export', self)
-            togglestart = QPushButton('Start/Stop', self)
+            self.togglestart = QPushButton('Stop', self)
 
             # Push Button Functions
             zero.clicked.connect(self.zero_scale)
             clearmax.clicked.connect(self.reset)
             export.clicked.connect(self.exportTeams)
-            togglestart.clicked.connect(self.toggle)
+            self.togglestart.clicked.connect(self.toggle)
 
             # Textbox to enter in team name
             self.teaminput = QLineEdit()
@@ -102,9 +103,11 @@ class MainWindow(QWidget):
 
             # List of teams and scores
             self.teamlist = QListWidget()
-            self.teamlist.setStyleSheet("background-color: rgb(85, 90, 100);")
+            self.teamlist.setStyleSheet("QListWidget{background-color: rgb(85, 90, 100);}"
+                                        "QListWidget::item:selected{background: #93d130; color: #000000}"
+                                        "QLabel{background: transparent;border: none;}")
             self.teamlist.setSortingEnabled(True)
-            self.teamlist.itemDoubleClicked.connect(self.selectTeam)
+            self.teamlist.itemClicked.connect(self.selectTeam)
 
             # EGBC Logo
             self.EGBC = QLabel()
@@ -127,7 +130,7 @@ class MainWindow(QWidget):
             self.grid.addWidget(zero, 2, 1)
             self.grid.addWidget(clearmax, 2, 2)
             self.grid.addWidget(export, 2, 3)
-            self.grid.addWidget(togglestart, 2, 4)
+            self.grid.addWidget(self.togglestart, 2, 4)
             self.grid.addWidget(self.teamlist, 1, 6)
             self.grid.addWidget(self.teaminput, 2, 6)
 
@@ -165,13 +168,28 @@ class MainWindow(QWidget):
             self.forcelcd.display(self.force)
 
         def toggle(self):
-            self.start ^= 1
-            if self.start:
-                self.chartView.hide()
-                self.forcelcd.show()
-            else:
-                self.loadNewGraph = True
-                self.forcelcd.hide()
+            if self.teams and self.currentteam[0].name():
+                self.inActive = 0;
+                self.start ^= 1
+                if self.start:
+                    self.togglestart.setText('Stop')
+                    self.chartView.hide()
+                    #self.grid.removeWidget(self.chartView)
+                    self.forcelcd.show()
+                else:
+                    self.togglestart.setText('Start')
+                    self.loadNewGraph = True
+                    self.forcelcd.hide()
+            elif not self.teams:
+                m = QMessageBox.question(self, 'PyQt5 message', "Enter a team and record data to view force graph",
+                                             QMessageBox.Ok)
+            elif not self.currentteam[0].name():
+                self.inActive ^= 1;
+                if self.inActive:
+                    self.togglestart.setText('Start')
+                else:
+                    self.togglestart.setText('Stop')
+
 
         def addTeam(self):
             self.grid.removeWidget(self.chartView)
@@ -185,7 +203,7 @@ class MainWindow(QWidget):
                 item.setFont(QtGui.QFont("Times", 32))
                 self.teamlist.addItem(item)
 
-            with open(os.path.join(csv_path, team + '.csv'), 'w', newline='') as csvfileout:
+            with open(os.path.join(csv_path, team + '.csv'), 'w+', newline='') as csvfileout:
                 writer = csv.DictWriter(csvfileout, fieldnames=['Sample', 'Force'])
                 writer.writeheader()
                 csvfileout.close()
@@ -199,7 +217,7 @@ class MainWindow(QWidget):
         def exportTeams(self):
             for team in self.teams:
                 sample = 0
-                with open(os.path.join(csv_path, team + '.csv'), 'w', newline='') as csvfileout:
+                with open(os.path.join(csv_path, team + '.csv'), 'w+', newline='') as csvfileout:
                     writer = csv.DictWriter(csvfileout, fieldnames=['Sample', 'Force'])
                     writer.writeheader()
                     for samples in self.teams[team]:
@@ -224,16 +242,18 @@ class MainWindow(QWidget):
         def updateforce(self):
             self.grid.removeWidget(self.chartView)
             if self.start:
-                # Generate some random force values for testing
-                #self.force = random.randrange(1,5000,1)
-                #self.force += 0.01
-
-                self.force = round(float(self.get_force()) * 9.81, 2)
-                self.forcelcd.display(self.force)
-                self.oldforce = self.force
+                if not self.ser or not self.sio:
+                    # Generate some random force values for testing
+                    self.force = random.randrange(1,5000,1)
+                    self.force += 0.01
+                else:
+                    self.force = round(float(self.get_force()) * 9.81, 2)
+                if not self.inActive:
+                    self.forcelcd.display(self.force)
+                    self.oldforce = self.force
 
                 # Update team dictionary and CSV file
-                if self.currentteam[0].name():
+                if self.currentteam[0].name() and not self.inActive:
                     self.teams[self.currentteam[0].name()].append(self.force)
                     start = time.time()
                     with open(os.path.join(csv_path, self.currentteam[0].name() + ".csv"), "a+", newline='') as csvfile:
@@ -303,27 +323,32 @@ class QListWidgetItem_Team(QListWidgetItem):
 
 def main():
     app = QApplication(sys.argv)
+    print(sys.argv)
 
-    # Detect COM port
-    ports = list(serial.tools.list_ports.comports())
-    for p in ports:
-        if "USB Serial Port" in p.description:
-            match = re.search(r"COM\d", p.description)
-            COM_PORT = match.group(0)
+    if '-debug' not in sys.argv[1:]:
+        # Detect COM port
+        ports = list(serial.tools.list_ports.comports())
+        for p in ports:
+            if "USB Serial Port" in p.description:
+                match = re.search(r"COM\d", p.description)
+                COM_PORT = match.group(0)
 
-    ##############################################################
-    #COM_PORT = UNCOMMENT AND SET COM PORT MANUALLY HERE IF NEEDED
-    ##############################################################
+        ##############################################################
+        #COM_PORT = UNCOMMENT AND SET COM PORT MANUALLY HERE IF NEEDED
+        ##############################################################
 
-    # Setup COM port
-    ser = serial.Serial(COM_PORT, 115200, timeout=0.2)
-    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
-    start_ = time.time()
-    while time.time() < start_ + 1:
-        trunk = ser.readline()
+        # Setup COM port
+        ser = serial.Serial(COM_PORT, 115200, timeout=0.2)
+        sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
+        start_ = time.time()
+        while time.time() < start_ + 1:
+            trunk = ser.readline()
 
-    # Start bridge crusher
-    cMain = MainWindow(ser, sio)
+        # Start bridge crusher
+        cMain = MainWindow(ser=ser, sio=sio)
+    else:
+        # Launch without serial data for testing
+        cMain = MainWindow()
 
     sys.exit(app.exec_())
 
