@@ -311,8 +311,9 @@ class MainWindow(QWidget):
                     if self.force > self.maxForce:
                         self.maxForce = self.force
                         self.maxForceText.setText("Maximum Force: %.2f N" % self.maxForce)
-                        self.activeTeam[0].maxForce = self.maxForce
-                        self.activeTeam[0].setForce(self.force)
+                        if self.activeTeam[0].maxForce < self.maxForce:
+                            self.activeTeam[0].maxForce = self.maxForce
+                            self.activeTeam[0].setForce(self.force)
 
             # Display force graph
             if not self.start and self.loadNewGraph:
