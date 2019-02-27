@@ -20,11 +20,11 @@ Authors: Nick Huttemann, Julie Lee
   
 2. If everything is working, you will see the force display changing when you press on your load cell.
     1. If the scale is not reading zero when no force is applied, press the "zero scale" button.
-3. Enter your team name into the team list on the right and **double click** the team to select it as the active team.
+3. Enter your team name into the team list on the right and **click** the team to select it as the **active team**.
 4. When a team is active, force data will be recorded into a .csv file. When your bridge has been crushed or you wish to view the recorded data, press the **Start/Stop** button to stop recording data and view a force vs time graph.
 5. When its time for the next team to have a go: 
     1. Enter another team name
-    2. **Double click** the team to select it as the active team
+    2. Click the team to select it as the active team
     3. Press **Reset** to reset the current maximum force
     4. Press **Start/Stop** and crush your bridge
 
