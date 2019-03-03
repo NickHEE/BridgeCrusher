@@ -274,7 +274,7 @@ class MainWindow(QWidget):
             print(output)
 
             # Ensure that the value is valid
-            if 'Exiting' not in output and len(output) in range(10, 12):
+            if 'Exiting' not in output and len(output) in range(10, 13):
                 end = output.rfind(',kg')
                 value = output[0:end]
             else:
